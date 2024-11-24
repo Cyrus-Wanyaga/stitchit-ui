@@ -1,0 +1,80 @@
+.create-file-container {
+    display: flex;
+    justify-content: space-between;
+    height: 100vh;
+    /* padding: 20px; */
+    /* user-select: none; */
+}
+
+.left-pane {
+    flex: 1;
+    padding: 0 24px;
+    background: #f9f9f9;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-right: 2px solid #eaeaea;
+}
+
+.draggable {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.drop-zone {
+    flex: 3;
+    background: #fafafa;
+    position: relative;
+    overflow-y: auto;
+}
+
+.page-area {
+    width: 210mm;
+    height: 297mm;
+    margin: auto;
+    padding: 20mm;
+    background: #fff;
+    border: 1px solid #ccc;
+    position: relative;
+}
+
+/* Create a grid of dots */
+.page-area::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        radial-gradient(
+            circle,
+            #ddd 1px,
+            transparent 1px
+        );
+    background-size: 10px 10px;
+    pointer-events: none;
+}
+
+.dropped-element {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.dropped-element:hover {
+    background-color: #ffcccc;
+}
+
+/* Dots highlight style */
+.dot-highlight {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background-color: black;
+    transition: background-color 0.2s;
+    pointer-events: none;
+}
