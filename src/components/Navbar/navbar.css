@@ -5,7 +5,8 @@
 .navbar {
     display: flex;
     padding: 24px 48px;
-    background-color: lightcoral;
+    background-color: #4fc960;
+    box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.2);
     align-items: center;
     justify-content: space-between;
 }

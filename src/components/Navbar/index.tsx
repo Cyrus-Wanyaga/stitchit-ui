@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import './navbar.css';
-import stitchItIcon from '../../../public/stitchit-icon.png';
+import stitchItIcon from './stitchit-icon.png';
 
 const Navbar = () => {
     return (
