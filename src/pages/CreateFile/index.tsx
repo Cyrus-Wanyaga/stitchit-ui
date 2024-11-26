@@ -1,16 +1,33 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import interact from 'interactjs';
 import { motion, useMotionValue } from 'framer-motion';
-import EditorJS from '@editorjs/editorjs';
 import './createfile.css';
+
+interface DroppedElement {
+    id: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    visible: boolean,
+    zIndex?: string
+};
+
+interface GhostPosition {
+    x: number,
+    y: number,
+    width?: number,
+    height?: number
+};
 
 const CreateFile = () => {
     const [dragging, setDragging] = useState(false);
-    const [droppedElements, setDroppedElements]: any = useState([]);
-    const [ghostPosition, setGhostPosition]: any = useState(null);
+    const [droppedElements, setDroppedElements] = useState<DroppedElement[]>([]);
+    const [ghostPosition, setGhostPosition] = useState<GhostPosition | null>(null);
     const [isDraggingNew, setIsDraggingNew] = useState(false);
     const rotate = useMotionValue(0);
     const isProcessingDrop = useRef(false);
+    const pageAreaRef = useRef<HTMLDivElement>(null);
 
     // Constants for A4 page dimensions (in pixels, assuming 96 DPI)
     const PAGE_WIDTH = 210 * 3.7795275591; // Convert mm to pixels
@@ -26,35 +43,32 @@ const CreateFile = () => {
         };
     };
 
-    const handleElementDrop = useCallback((event: MouseEvent, dropZoneRect: DOMRect) => {
+    const handleElementDrop = useCallback((event: MouseEvent, dropZoneRect: DOMRect, width: number, height: number) => {
         if (isProcessingDrop.current) return;
         isProcessingDrop.current = true;
 
         const relativeX = event.pageX - dropZoneRect.left;
         const relativeY = event.pageY - dropZoneRect.top;
-        console.log(`Distance between mouse pos x and drop zone left axis : ${relativeX}`);
-        console.log(`Distance between mouse pos y and drop zone top axis : ${relativeY}`);
 
-        console.log(`${snapToGrid(relativeX)} : ${snapToGrid(relativeY)}`);
         const { x: boundedX, y: boundedY } = checkBoundaries(
             snapToGrid(relativeX),
             snapToGrid(relativeY),
-            346,
-            100
+            width,
+            height
         );
 
-        console.log(`Bounded x : ${boundedX} , Bounded y : ${boundedY}`);
         const elementId = `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        
+
         setDroppedElements(prev => [
             ...prev,
             {
                 id: elementId,
                 x: boundedX,
                 y: boundedY,
-                width: 346,
-                height: 100,
-                visible: true
+                width: width,
+                height: height,
+                visible: true,
+                zIndex: '1'
             }
         ]);
 
@@ -71,7 +85,6 @@ const CreateFile = () => {
                 inertia: true,
                 autoStart: true,
                 onstart: (event) => {
-                    // console.log(event.dy);
                     const rect = event.target.getBoundingClientRect();
                     setDragging(true);
                     setIsDraggingNew(true);
@@ -81,7 +94,7 @@ const CreateFile = () => {
                         width: rect.width,
                         height: rect.height
                     });
-                    rotate.set(5);
+                    rotate.set(10);
                 },
                 onmove: (event) => {
                     if (isDraggingNew) {
@@ -105,7 +118,7 @@ const CreateFile = () => {
                         if (isInDropZone && isDraggingNew) {
                             rotate.set(0);
                         } else {
-                            rotate.set(5);
+                            rotate.set(10);
                         }
                     }
                 },
@@ -122,7 +135,9 @@ const CreateFile = () => {
                     );
 
                     if (isInDropZone && isDraggingNew) {
-                        handleElementDrop(event, dropZoneRect);
+                        const width = Math.ceil(event.target.offsetWidth);
+                        const height = Math.ceil(event.target.offsetHeight);
+                        handleElementDrop(event, dropZoneRect, width, height);
                     }
 
                     setDragging(false);
@@ -137,101 +152,111 @@ const CreateFile = () => {
         interact('.dropped-element')
             .draggable({
                 inertia: true,
-                autoStart: true,
                 modifiers: [
-                    interact.modifiers.snap({
+                    // Snap to grid
+                    interact.modifiers.snapSize({
                         targets: [
                             interact.snappers.grid({
-                                x: 10,
-                                y: 10,
-                                range: 10 / 2
+                                x: GRID_SIZE,
+                                y: GRID_SIZE
                             })
                         ]
                     }),
-                    interact.modifiers.restrict({
-                        restriction: 'parent',
+                    // Restrict movement to page area
+                    interact.modifiers.restrictRect({
+                        restriction: '.page-area',
                         elementRect: { top: 0, left: 0, bottom: 1, right: 1 }
-                    }),
+                    })
                 ],
-                onstart: (event) => {
-                    const elementId = event.target.getAttribute('data-id');
-                    // Hide other elements while dragging this one
-                    console.log(droppedElements);
-                    // setDroppedElements(prev =>
-                    //     prev.map(el => ({
-                    //         ...el,
-                    //         visible: el.id.toString() === elementId
-                    //     }))
-                    // );
-                },
-                onmove: (event) => {
-                    const target = event.target;
-                    const elementId = target.getAttribute('data-id');
-                    const dx = snapToGrid(event.dx);
-                    const dy = snapToGrid(event.dy);
+                listeners: {
+                    start(event) {
+                        const target = event.target as HTMLElement;
+                        target.style.zIndex = '10';
+                    },
+                    move(event) {
+                        const target = event.target as HTMLElement;
+                        const x = (parseFloat(target.getAttribute('data-x') || '0') || 0) + event.dx;
+                        const y = (parseFloat(target.getAttribute('data-y') || '0') || 0) + event.dy;
+                        // Update element position
+                        setDroppedElements(prev =>
+                            prev.map(el => {
+                                if (el.id === target.getAttribute('data-id')) {
+                                    const { x: boundedX, y: boundedY } = checkBoundaries(
+                                        snapToGrid(x),
+                                        snapToGrid(y),
+                                        el.width,
+                                        el.height,
+                                    );
 
-                    setDroppedElements(prev =>
-                        prev.map(el => {
-                            if (el.id.toString() === elementId) {
-                                const newX = el.x + dx;
-                                const newY = el.y + dy;
-                                const { x: boundedX, y: boundedY } = checkBoundaries(
-                                    newX,
-                                    newY,
-                                    el.width,
-                                    el.height
-                                );
-                                return { ...el, x: boundedX, y: boundedY };
-                            }
-                            return el;
-                        })
-                    );
-                },
-                onend: () => {
-                    // Show all elements again
-                    // setDroppedElements(prev =>
-                    //     prev.map(el => ({ ...el, visible: true }))
-                    // );
+                                    // Update transform and data attributes
+                                    target.style.transform = `translate(${boundedX}px, ${boundedY}px)`;
+                                    // target.style.zIndex = '100';
+                                    target.setAttribute('data-x', boundedX.toString());
+                                    target.setAttribute('data-y', boundedY.toString());
+
+                                    return {
+                                        ...el,
+                                        x: boundedX,
+                                        y: boundedY,
+                                        zIndex: '100'
+                                    };
+                                }
+                                return el;
+                            })
+                        );
+                    },
+                    end(event) {
+                        setDroppedElements(prev =>
+                            prev.map(el => ({ ...el, zIndex: '1' }))
+                        );
+                    }
                 }
             }).resizable({
                 edges: { top: true, left: true, bottom: true, right: true },
-                onmove: (event) => {
-                    console.log(event);
-                },
+                listeners: {
+                    move: function (event) {
+                        let { x, y } = event.target.dataset
+
+                        x = (parseFloat(x) || 0) + event.deltaRect.left
+                        y = (parseFloat(y) || 0) + event.deltaRect.top
+
+                        Object.assign(event.target.style, {
+                            width: `${event.rect.width}px`,
+                            height: `${event.rect.height}px`,
+                            transform: `translate(${x}px, ${y}px)`
+                        })
+
+                        Object.assign(event.target.dataset, { x, y })
+                    }
+                }
             });
-    }, [droppedElements])
+    }, []);
 
     useEffect(() => {
         initializeDraggable();
         initializeContentDraggable();
-    }, [initializeDraggable, initializeContentDraggable]);
+    }, [initializeDraggable, initializeContentDraggable, droppedElements]);
 
     const DroppedElement = ({ element }) => (
         <motion.div
             className="dropped-element"
             data-id={element.id}
-            initial={{ opacity: 1 }}
-            animate={{
-                // opacity: element.visible === false ? 0 : 1,
-                // x: element.x,
-                // y: element.y
-            }}
+            data-x={element.x}
+            data-y={element.y}
             style={{
                 width: `${element.width}px`,
                 height: `${element.height}px`,
-                x: element.x,
-                y: element.y,
+                position: 'absolute',
+                transform: `translate(${element.x}px, ${element.y}px)`,
                 backgroundColor: '#fdfdfd',
-                boxShadow: '1px 1px 100px rgba(0, 0, 0, 0.1)',
                 border: '1px solid rgba(141, 166, 221, 0.8)',
                 borderRadius: '5px',
-                position: 'absolute',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                userSelect: 'none'
-                // padding: '24px'
+                userSelect: 'none',
+                zIndex: `${element.zIndex}`
             }}
         >
             Content Block
@@ -239,18 +264,17 @@ const CreateFile = () => {
     );
 
     return (
-        <div className="create-file-container">
+        <div className="create-file-container" style={{ border: '1px solid transparent' }}>
             <div className="left-pane">
-                <h4>Start by grabbing a div below</h4>
-                <p style={{ marginTop: '48px' }}>And drop it into the creator area on your right</p>
+                <h4>Grab a content block below</h4>
+                <p style={{ marginTop: '48px', textAlign: 'center' }}>And drop it into the creator area on the right</p>
                 <motion.div
                     className="draggable"
-                    initial={{opacity: 0}}
-                    whileInView={{opacity: 1}}
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
                     whileHover={{ scale: 1.01 }}
                     style={{
                         width: '100%',
-                        // height: '100px',
                         padding: '48px 0',
                         marginTop: '48px',
                         backgroundColor: '#8da6dd',
@@ -267,7 +291,7 @@ const CreateFile = () => {
             </div>
 
             <div className="drop-zone">
-                <div className="page-area">
+                <div ref={pageAreaRef} className="page-area" style={{ position: 'relative' }}>
                     {droppedElements.map(element => (
                         <DroppedElement key={element.id} element={element} />
                     ))}
