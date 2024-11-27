@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import interact from 'interactjs';
 import { motion, useMotionValue } from 'framer-motion';
 import './createfile.css';
+import EditorJS from '@editorjs/editorjs';
+import Header from '@editorjs/header';
 
 interface DroppedElement {
     id: string,
@@ -28,7 +30,7 @@ const CreateFile = () => {
     const rotate = useMotionValue(0);
     const isProcessingDrop = useRef(false);
     const pageAreaRef = useRef<HTMLDivElement>(null);
-
+    const editorRefs = useRef<{[key: string]: HTMLDivElement}>({});
     // Constants for A4 page dimensions (in pixels, assuming 96 DPI)
     const PAGE_WIDTH = 210 * 3.7795275591; // Convert mm to pixels
     const PAGE_HEIGHT = 297 * 3.7795275591;
@@ -59,6 +61,9 @@ const CreateFile = () => {
 
         const elementId = `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+        editorRefs.current[elementId] = React.createRef<HTMLDivElement>();
+        console.log('On drop ', editorRefs);
+
         setDroppedElements(prev => [
             ...prev,
             {
@@ -76,6 +81,50 @@ const CreateFile = () => {
         setTimeout(() => {
             isProcessingDrop.current = false;
         }, 100);
+    }, []);
+
+    const initializeEditorJS = useCallback((elementId: string) => {
+        // Direct access to the DOM element
+        const editorContainer = editorRefs.current[elementId];
+
+        if (!editorContainer) {
+            console.error('Editor container not found for element:', elementId);
+            return null;
+        }
+
+        try {
+            const editor = new EditorJS({
+                holder: editorContainer,
+                tools: {
+                    header: {
+                        class: Header,
+                        inlineToolbar: ['link']
+                    },
+                    list: {
+                        // class: List,
+                        inlineToolbar: true
+                    }
+                },
+                data: {
+                    blocks: []
+                },
+                placeholder: 'Type your content here...'
+            });
+
+            // Update the element with editor instance
+            setDroppedElements(prev =>
+                prev.map(el =>
+                    el.id === elementId
+                        ? { ...el, editorInstance: editor }
+                        : el
+                )
+            );
+
+            return editor;
+        } catch (error) {
+            console.error('Error initializing EditorJS:', error);
+            return null;
+        }
     }, []);
 
     const initializeDraggable = useCallback(() => {
@@ -237,31 +286,53 @@ const CreateFile = () => {
         initializeContentDraggable();
     }, [initializeDraggable, initializeContentDraggable, droppedElements]);
 
-    const DroppedElement = ({ element }) => (
-        <motion.div
-            className="dropped-element"
-            data-id={element.id}
-            data-x={element.x}
-            data-y={element.y}
-            style={{
-                width: `${element.width}px`,
-                height: `${element.height}px`,
-                position: 'absolute',
-                transform: `translate(${element.x}px, ${element.y}px)`,
-                backgroundColor: '#fdfdfd',
-                border: '1px solid rgba(141, 166, 221, 0.8)',
-                borderRadius: '5px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                userSelect: 'none',
-                zIndex: `${element.zIndex}`
-            }}
-        >
-            Content Block
-        </motion.div>
-    );
+    const DroppedElement = ({ element }) => {
+        const editorRef = useRef<HTMLDivElement>(null);
+
+        // useEffect(() => {
+        //     if (editorRef.current) {
+        //         // Store the actual DOM element, not the ref object
+        //         editorRefs.current[element.id] = editorRef.current;
+
+        //         // Initialize EditorJS
+        //         const editor = initializeEditorJS(element.id);
+
+        //         // Cleanup
+        //         return () => {
+        //             if (editor && typeof editor.destroy === 'function') {
+        //                 editor.destroy();
+        //             }
+        //         };
+        //     }
+        // }, [element.id, initializeEditorJS]);
+
+        return (
+            <motion.div
+                ref={editorRef}
+                className="dropped-element"
+                data-id={element.id}
+                data-x={element.x}
+                data-y={element.y}
+                style={{
+                    width: `${element.width}px`,
+                    height: `${element.height}px`,
+                    position: 'absolute',
+                    transform: `translate(${element.x}px, ${element.y}px)`,
+                    backgroundColor: '#fdfdfd',
+                    border: '1px solid rgba(141, 166, 221, 0.8)',
+                    borderRadius: '5px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    zIndex: `${element.zIndex}`
+                }}
+            >
+                Content Block
+            </motion.div>
+        );
+    }
 
     return (
         <div className="create-file-container" style={{ border: '1px solid transparent' }}>
