@@ -1,0 +1,23 @@
+.codex-editor {
+    position: absolute;
+    margin: auto;
+    width: calc(100% - 48px);
+    height: calc(100% - 48px);
+    z-index: 10000;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.codex-editor__redactor {
+    height: inherit;
+    width: inherit;
+    /* background: red; */
+    padding-bottom: 0 !important;
+}
+
+.ce-toolbar {
+    right: 0; /* Align to the right */
+    left: auto;
+  }
