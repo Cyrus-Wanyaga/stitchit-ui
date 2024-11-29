@@ -26,10 +26,11 @@ const CreateFile = () => {
     const [droppedElements, setDroppedElements] = useState<DroppedElement[]>([]);
     const [ghostPosition, setGhostPosition] = useState<GhostPosition | null>(null);
     const [isDraggingNew, setIsDraggingNew] = useState(false);
+    const [marginVisible, setIsMarginVisible] = useState(false);
     const rotate = useMotionValue(0);
     const isProcessingDrop = useRef(false);
     const pageAreaRef = useRef<HTMLDivElement>(null);
-    
+
     // Constants for A4 page dimensions (in pixels, assuming 96 DPI)
     const PAGE_WIDTH = 210 * 3.7795275591; // Convert mm to pixels
     const PAGE_HEIGHT = 297 * 3.7795275591;
@@ -117,9 +118,11 @@ const CreateFile = () => {
                         );
 
                         if (isInDropZone && isDraggingNew) {
+                            setIsMarginVisible(true);
                             rotate.set(0);
                         } else {
                             rotate.set(10);
+                            setIsMarginVisible(false);
                         }
                     }
                 },
@@ -149,7 +152,23 @@ const CreateFile = () => {
             });
     }, [isDraggingNew]);
 
+    const pageAreaDimensions = (): { width: number, height: number } => {
+        const pageArea = pageAreaRef.current;
+        if (!pageArea) {
+            return {
+                width: 0,
+                height: 0
+            }
+        }
+
+        return {
+            width: pageArea.offsetWidth,
+            height: pageArea.offsetHeight
+        }
+    };
+
     const initializeContentDraggable = useCallback(() => {
+        const { width: pageWidth, height: pageHeight } = pageAreaDimensions();
         interact('.dropped-element')
             .draggable({
                 inertia: true,
@@ -189,9 +208,7 @@ const CreateFile = () => {
                                         el.height,
                                     );
 
-                                    // Update transform and data attributes
                                     target.style.transform = `translate(${boundedX}px, ${boundedY}px)`;
-                                    // target.style.zIndex = '100';
                                     target.setAttribute('data-x', boundedX.toString());
                                     target.setAttribute('data-y', boundedY.toString());
 
@@ -211,7 +228,7 @@ const CreateFile = () => {
                             prev.map(el => ({ ...el, zIndex: '1' }))
                         );
                     }
-                }
+                },
             }).resizable({
                 edges: { top: true, left: true, bottom: true, right: true },
                 listeners: {
@@ -229,7 +246,26 @@ const CreateFile = () => {
 
                         Object.assign(event.target.dataset, { x, y })
                     }
-                }
+                },
+                modifiers: [
+                    interact.modifiers.restrictEdges({
+                        outer: () => {
+                            const pageRect = pageAreaRef.current?.getBoundingClientRect();
+
+                            const left = pageRect?.left;
+                            const right = pageRect?.right;
+                            const top = pageRect?.top;
+                            console.log(pageRect);
+                            const bottom = pageRect?.bottom;
+
+                            return {
+                                left: left + 76,
+                                right: right - 76,
+                                top: top + 76
+                            };
+                        },
+                    }),
+                ],
             });
     }, []);
 
@@ -269,9 +305,17 @@ const CreateFile = () => {
             </div>
 
             <div className="drop-zone">
-                <div ref={pageAreaRef} className="page-area" style={{ position: 'relative' }}>
+                <div ref={pageAreaRef} className="page-area">
+                    {marginVisible && (
+                        <>
+                            <div className='top-margin-border'></div>
+                            <div className='left-margin-border'></div>
+                            <div className='right-margin-border'></div>
+                            <div className='bottom-margin-border'></div>
+                        </>
+                    )}
                     {droppedElements.map(element => (
-                        <DroppedElement key={element.id} element={element} setDroppedElements={setDroppedElements}/>
+                        <DroppedElement key={element.id} element={element} setDroppedElements={setDroppedElements} />
                     ))}
                 </div>
             </div>

@@ -8,7 +8,8 @@ const DroppedElement = ({ element, setDroppedElements }) => {
     const editorRef = useRef<HTMLDivElement>(null);
     const editorRefs = useRef<{ [key: string]: HTMLDivElement }>({});   
     const [specialKeyPressed, setSpecialKeyPressed] = useState(false);
-    const initializeEditorJS = useCallback(async (elementId: string, width: number, height: number) => {
+
+    const initializeEditorJS = useCallback((elementId: string, width: number, height: number) : EditorJS | null => {
         // Direct access to the DOM element
         const editorContainer = editorRefs.current[elementId];
 
@@ -16,27 +17,6 @@ const DroppedElement = ({ element, setDroppedElements }) => {
             console.error('Editor container not found for element:', elementId);
             return null;
         }
-
-        console.log('Editor container : ', editorContainer);
-        console.log('Width: ', width, ' : ', height);
-
-        const inlineStyles = `
-            .editorjs-container {
-                border: 2px dashed #ccc;
-                padding: 10px;
-                border-radius: 5px;
-                background-color: #f9f9f9;
-            }
-
-            .codex-editor: {
-                background-color: 'red',
-            }
-        `;
-
-        // const styleElement = document.createElement('style');
-        // styleElement.setAttribute('nonce', element.id); // Use the same nonce as Editor.js
-        // styleElement.textContent = inlineStyles;
-        // document.head.appendChild(styleElement);
 
         try {
             const editor = new EditorJS({
@@ -76,16 +56,6 @@ const DroppedElement = ({ element, setDroppedElements }) => {
                 },
             });
 
-            console.log('editor : ', editor);
-
-            // editor.on('change', () => {
-            //     console.log('change occurred');
-            //     const blockCount = editor.blocks.getBlocksCount();
-            //     if (blockCount > 1) {
-            //         editor.blocks.delete(blockCount - 1); // Deletes the last block
-            //     }
-            // });
-
             setDroppedElements(prev => {
                 // Create a new array with updated element
                 return prev.map(el =>
@@ -123,37 +93,7 @@ const DroppedElement = ({ element, setDroppedElements }) => {
         };
     }, [element.id]);
 
-    const styleTag = useMemo(() => {
-        const style = document.createElement('style');
-        style.setAttribute('nonce', element.id);
-        style.textContent = `
-            /* Scoped styles for this specific EditorJS instance */
-            #${element.id} .codex-editor {
-                max-width: 100% !important;
-                max-height: 100% !important;
-                overflow: hidden !important;
-            }
-            
-            #${element.id} .codex-editor__content {
-                max-width: 100% !important;
-                max-height: 100% !important;
-                overflow: hidden !important;
-            }
-        `;
-        return style;
-    }, [element.id]);
-
-    useEffect(() => {
-        // Append the style tag when the component mounts
-        document.head.appendChild(styleTag);
-
-        // Cleanup the style tag when the component unmounts
-        return () => {
-            document.head.removeChild(styleTag);
-        };
-    }, []);
-
-    const handleKeyDown = (event) => {
+    const handleKeyDown = (event: Event) => {
         console.log(event);
     }
 

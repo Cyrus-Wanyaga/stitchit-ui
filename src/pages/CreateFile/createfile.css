@@ -79,3 +79,41 @@
     transition: background-color 0.2s;
     pointer-events: none;
 }
+
+.top-margin-border {
+    background-color: rgba(0, 0, 0, 0.1);
+    width: 100%;
+    height: 1px;
+    position: absolute;
+    left: 0;
+    top: 20mm;
+}
+
+.bottom-margin-border {
+    background-color: rgba(0, 0, 0, 0.1);
+    width: 100%;
+    height: 1px;
+    position: absolute;
+    left: 0;
+    bottom: 20mm;
+}
+
+.left-margin-border {
+    background-color: rgba(0, 0, 0, 0.1);
+    width: 1px;
+    height: 100%;
+    position: absolute;
+    left: 20mm;
+    top: 0;
+    bottom: 0;
+}
+
+.right-margin-border {
+    background-color: rgba(0, 0, 0, 0.1);
+    width: 1px;
+    height: 100%;
+    position: absolute;
+    right: 20mm;
+    top: 0;
+    bottom: 0;
+}
