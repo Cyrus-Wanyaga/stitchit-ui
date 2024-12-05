@@ -35,13 +35,16 @@ const CreateFile = () => {
     const PAGE_WIDTH = 210 * 3.7795275591; // Convert mm to pixels
     const PAGE_HEIGHT = 297 * 3.7795275591;
     const GRID_SIZE = 10;
+    const PAGE_MARGIN_LEFT = 76;
+    const PAGE_MARGIN_RIGHT = 76;
+    const PAGE_MARGIN_TOP = 76;
 
     const snapToGrid = (value: number): number => Math.round(value / GRID_SIZE) * GRID_SIZE;
 
     const checkBoundaries = (x: number, y: number, width: number, height: number) => {
         return {
-            x: Math.max(0, Math.min(x, PAGE_WIDTH - width)),
-            y: Math.max(0, Math.min(y, PAGE_HEIGHT - height))
+            x: Math.max(PAGE_MARGIN_LEFT, Math.min(x, PAGE_WIDTH - width - PAGE_MARGIN_RIGHT)),
+            y: Math.max(PAGE_MARGIN_TOP, Math.min(y, PAGE_HEIGHT - height))
         };
     };
 
@@ -168,7 +171,7 @@ const CreateFile = () => {
     };
 
     const initializeContentDraggable = useCallback(() => {
-        const { width: pageWidth, height: pageHeight } = pageAreaDimensions();
+        // const { width: pageWidth, height: pageHeight } = pageAreaDimensions();
         interact('.dropped-element')
             .draggable({
                 inertia: true,
@@ -177,8 +180,8 @@ const CreateFile = () => {
                     interact.modifiers.snapSize({
                         targets: [
                             interact.snappers.grid({
-                                x: GRID_SIZE,
-                                y: GRID_SIZE
+                                x: 10,
+                                y: 10
                             })
                         ]
                     }),
@@ -201,27 +204,31 @@ const CreateFile = () => {
                         setDroppedElements(prev =>
                             prev.map(el => {
                                 if (el.id === target.getAttribute('data-id')) {
-                                    const { x: boundedX, y: boundedY } = checkBoundaries(
-                                        snapToGrid(x),
-                                        snapToGrid(y),
-                                        el.width,
-                                        el.height,
-                                    );
-
-                                    target.style.transform = `translate(${boundedX}px, ${boundedY}px)`;
-                                    target.setAttribute('data-x', boundedX.toString());
-                                    target.setAttribute('data-y', boundedY.toString());
+                                    target.style.transform = `translate(${x}px, ${y}px)`;
+                                    target.setAttribute('data-x', x.toString());
+                                    target.setAttribute('data-y', y.toString());
 
                                     return {
                                         ...el,
-                                        x: boundedX,
-                                        y: boundedY,
+                                        x: x,
+                                        y: y,
                                         zIndex: '100'
                                     };
                                 }
                                 return el;
                             })
                         );
+                        // const id = event.target.getAttribute('data-id');
+                        // const dragElement = event.target;
+                        // console.log('Drag element id : ', dragElement);
+                        // if (dragElement) {
+                        //     console.log(`Drag element is available`);
+                        //     const rect = dragElement.getBoundingClientRect();
+                        //     dragElement.style.position = 'absolute';
+                        //     dragElement.style.left = `${event.clientX - rect.width / 2}px`;
+                        //     dragElement.style.top = `${event.clientY - rect.height / 2}px`;
+                        //     dragElement.style.zIndex = '1000';
+                        // }
                     },
                     end(event) {
                         setDroppedElements(prev =>
